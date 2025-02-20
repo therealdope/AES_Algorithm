@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <!--
+    This HTML file provides an AES Encryption/Decryption interface.
+    It includes a form for entering encryption/decryption inputs, an algorithm workflow section,
+    and a results display section.
+    The design features a modern gradient header, clean containers, and responsive layouts.
+  -->
+  <meta charset="UTF-8">
+  <!-- Ensure responsiveness on mobile devices -->
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <!-- Prevent caching to always load the latest version -->
+  <meta http-equiv="Cache-Control" content="no-store, no-cache, must-revalidate, max-age=0">
+  <meta http-equiv="Pragma" content="no-cache">
+  <meta http-equiv="Expires" content="0">
+  <title>AES Encryption/Decryption</title>
+  <!-- Tailwind CSS for rapid UI styling -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Font Awesome for icons -->
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <!-- Google Fonts: Roboto Mono for a cipher-like feel in general text -->
+  <link href="https://fonts.googleapis.com/css2?family=Roboto+Mono:wght@400;700&display=swap" rel="stylesheet">
+  <!-- External CSS for loader animations -->
+  <link rel="stylesheet" href="/static/loader.css">
+  <style>
+    /* Global styling for the page */
+    body {
+      background-color: #F0F4F8; /* Light blue-gray background */
+      font-family: 'Roboto Mono', monospace;
+    }
+    /* Style for smooth dropdown transitions */
+    .dropdown-content,
+    .nested-dropdown-content {
+      max-height: 0;
+      overflow: hidden;
+      transition: max-height 0.5s ease;
+    }
+    .dropdown-content.open,
+    .nested-dropdown-content.open {
+      max-height: 100%;
+    }
+    /* Dropdown header hover effect */
+    .dropdown-header, .nested-dropdown-header {
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+    .dropdown-header:hover, .nested-dropdown-header:hover {
+      color: #1976D2; /* Blue accent */
+    }
+    /* Styling for the copy icon with hover effect */
+    .copy-icon {
+      cursor: pointer;
+      transition: color 0.3s ease;
+    }
+    .copy-icon:hover {
+      color: #1976D2;
+    }
+    /* Specific styling for the Algorithm Workflow section */
+    .workflow {
+      font-family: 'Roboto';
+    }
+  </style>
+</head>
+<body class="bg-sky-50">
+  <!--
+    JavaScript to reset the form on page reload (while preserving error messages)
+  -->
+  <script>
+    window.onload = function() {
+      if (performance.navigation.type === 1) {
+        document.getElementById("aesForm").reset();
+        // document.getElementById("resultDiv").innerHTML = "<p class='text-blue-500'>Results will appear here</p>";
+        // document.getElementById("cipherText").value = "";
+      }
+    };
+  </script>
+
+  <!-- Loader container -->
+  <div id="box" class="mb-4">
+    <div class="loader"></div>
+  </div>
+
+  <!-- Main container -->
+  <div class="container mx-auto p-4">
+    <!-- Header section with gradient background -->
+    <h1 class="text-3xl font-bold text-center mb-8 p-4 rounded bg-gradient-to-r from-blue-500 to-teal-500 text-white shadow-lg">
+      AES Encryption/Decryption
+    </h1>
+
+    <!-- Display error messages if any -->
+    {% if error %}
+      <div class="p-4 border border-red-400 bg-red-100 text-red-700 rounded mb-6">
+        {{ error }}
+      </div>
+    {% endif %}
+
+    <!-- Flex container with independent columns -->
+    <div class="flex flex-col md:flex-row gap-4 items-start">
+      <!-- Left Column: Input Form (independent scrolling) -->
+      <div class="w-full md:w-1/2 p-4 border border-gray-300 rounded bg-white shadow max-h-[650px] overflow-y-auto">
+        <form method="post" autocomplete="off" id="aesForm">
+          <!-- Operation selection -->
+          <div class="mb-4">
+            <span class="block text-gray-800 text-sm font-bold mb-2">Operation:</span>
+            <div class="flex gap-4">
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="operation" value="encrypt" checked>
+                <span class="ml-2">Encrypt</span>
+              </label>
+              <label class="inline-flex items-center cursor-pointer">
+                <input type="radio" name="operation" value="decrypt">
+                <span class="ml-2">Decrypt</span>
+              </label>
+            </div>
+          </div>
+
+          <!-- Encryption Section -->
+          <div id="encryptSection">
+            <h2 class="text-xl font-bold mb-2 text-gray-800">Encryption</h2>
+            <hr class="py-2">
+            <div class="mb-4">
+              <label for="plaintext_mode" class="block text-gray-800 text-sm font-bold mb-2">Plaintext Mode:</label>
+              <select name="plaintext_mode" id="plaintext_mode" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="text">Plain Text</option>
+                <option value="hex">Hex</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label for="plaintext" class="block text-gray-800 text-sm font-bold mb-2">Plaintext:</label>
+              <textarea id="plaintext" name="plaintext" rows="4" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter plaintext here..."></textarea>
+            </div>
+          </div>
+
+          <!-- Decryption Section (initially hidden) -->
+          <div id="decryptSection" class="hidden">
+            <h2 class="text-xl font-bold mb-2 text-gray-800">Decryption</h2>
+            <hr class="py-2">
+            <div class="mb-4">
+              <label for="ciphertext_mode" class="block text-gray-800 text-sm font-bold mb-2">Ciphertext Mode:</label>
+              <select name="ciphertext_mode" id="ciphertext_mode" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="hex" selected>Hex</option>
+              </select>
+            </div>
+            <div class="mb-4">
+              <label for="ciphertext" class="block text-gray-800 text-sm font-bold mb-2">Ciphertext (Hex):</label>
+              <textarea id="ciphertext" name="ciphertext" rows="4" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter ciphertext in hex..."></textarea>
+            </div>
+            <div class="mb-4">
+              <label for="decrypted_mode" class="block text-gray-800 text-sm font-bold mb-2">Decrypted Output Mode:</label>
+              <select name="decrypted_mode" id="decrypted_mode" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+                <option value="text" selected>Text</option>
+                <option value="hex">Hex</option>
+              </select>
+            </div>
+          </div>
+
+          <!-- Key Section -->
+          <div class="mb-6">
+            <label for="key_mode" class="block text-gray-800 text-sm font-bold mb-2">Key Mode:</label>
+            <select name="key_mode" id="key_mode" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
+              <option value="text">Plain Text</option>
+              <option value="hex">Hex</option>
+            </select>
+          </div>
+          <div class="mb-6">
+            <label for="key" class="block text-gray-800 text-sm font-bold mb-2">Key (16 characters):</label>
+            <input id="key" name="key" type="text" maxlength="32" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter key">
+          </div>
+
+          <!-- Form Buttons -->
+          <div class="flex items-center justify-between">
+            <button type="submit" class="bg-gradient-to-r from-blue-500 to-teal-500 hover:from-blue-600 hover:to-teal-600 text-white font-bold py-2 px-4 rounded">
+              Submit
+            </button>
+            <button type="reset" class="bg-gray-500 hover:bg-gray-600 text-white font-bold py-2 px-4 rounded">
+              Clear
+            </button>
+          </div>
+        </form>
+      </div>
+
+      <!-- Right Column: Algorithm Workflow and Results (independent scrolling) -->
+      <div class="w-full md:w-1/2 space-y-4 max-h-[650px] overflow-y-auto">
+        <!-- Algorithm Workflow Dropdown -->
+        <div class="workflow p-4 border border-gray-300 rounded dropdown bg-white shadow">
+          <div class="dropdown-header flex items-center justify-between pb-2 font-bold text-xl text-gray-800">
+            Algorithm Workflow
+            <span class="dropdown-icon"><i class="fa fa-chevron-down"></i></span>
+          </div>
+          <div class="dropdown-content mt-1">
+            <hr class="mb-2">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">AES-128 High-Level Steps</h3>
+            <ol class="list-decimal list-inside text-gray-800 mb-4">
+              <li>
+                <strong>Key Expansion</strong>:
+                <p class="ml-6">Expand the original 128-bit key into multiple round keys (44 words for AES-128).</p>
+              </li>
+              <li>
+                <strong>Initial Round (Round 0)</strong>:
+                <ul class="list-disc list-inside ml-6">
+                  <li><strong>AddRoundKey</strong>: XOR the plaintext with the initial round key.</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Main Rounds (Rounds 1 to 9)</strong>:
+                <ul class="list-disc list-inside ml-6">
+                  <li><strong>SubBytes</strong>: Replace each byte using the S-box lookup.</li>
+                  <li><strong>ShiftRows</strong>: Perform cyclic row shifts.</li>
+                  <li><strong>MixColumns</strong>: Process columns via Galois field multiplication.</li>
+                  <li><strong>AddRoundKey</strong>: XOR the state with the round key.</li>
+                </ul>
+              </li>
+              <li>
+                <strong>Final Round (Round 10)</strong>:
+                <ul class="list-disc list-inside ml-6">
+                  <li><strong>SubBytes</strong></li>
+                  <li><strong>ShiftRows</strong></li>
+                  <li><strong>AddRoundKey</strong></li>
+                </ul>
+                <p class="ml-6">Note: No MixColumns in the final round.</p>
+              </li>
+            </ol>
+            <hr class="my-2">
+            <h3 class="text-lg font-semibold mb-2 text-gray-800">AES Decryption (Inverse Operations)</h3>
+            <p class="ml-2 text-gray-800">
+              Reverse each encryption step using <code>InvShiftRows</code>, <code>InvSubBytes</code>, <code>InvMixColumns</code> and round keys in reverse.
+            </p>
+          </div>
+        </div>
+
+        <!-- Result Display Section -->
+        <div class="border border-gray-300 rounded bg-white shadow">
+          <div id="resultDiv" class="p-4">
+            {% if result %}
+              {% if operation == 'encrypt' %}
+                <div class="mb-4 p-4 border border-gray-300 rounded bg-blue-50">
+                  <div class="flex items-center justify-between">
+                    <p id="cipherTextLabel" class="text-xl font-bold text-gray-800">Ciphertext (Hex):</p>
+                    <span class="copy-icon text-2xl mt-2 mr-1" id="copyIcon"><i class="fa fa-copy"></i></span>
+                  </div>
+                  <p id="cipherTextValue" class="text-lg text-gray-800 break-words">{{ result.ciphertext }}</p>
+                </div>
+              {% elif operation == 'decrypt' %}
+                <div class="mb-4 p-4 border border-gray-300 rounded bg-blue-50">
+                  <p class="text-xl font-bold text-gray-800">Decrypted Text:</p>
+                  <p class="text-lg text-gray-800 break-words">{{ result.decrypted_text }}</p>
+                </div>
+              {% endif %}
+
+              <!-- Word Info Dropdown -->
+              <div class="p-4 border border-gray-300 rounded dropdown bg-white shadow">
+                <div class="dropdown-header flex items-center justify-between font-bold text-xl text-gray-800">
+                  Word Info
+                  <span class="dropdown-icon"><i class="fa fa-chevron-down"></i></span>
+                </div>
+                <div class="dropdown-content mt-2">
+                  {% for line in result.word_info %}
+                    <pre class="text-lg text-gray-800 whitespace-pre break-words">{{ line }}</pre>
+                  {% endfor %}
+                </div>
+              </div>
+
+              <!-- Round Info Dropdown -->
+              <div class="p-4 border border-gray-300 rounded dropdown mt-4 bg-white shadow">
+                <div class="dropdown-header flex items-center justify-between font-bold text-xl text-gray-800">
+                  Round Info
+                  <span class="dropdown-icon"><i class="fa fa-chevron-down"></i></span>
+                </div>
+                <div class="dropdown-content mt-2">
+                  {% for round in result.round_info %}
+                    <div class="p-2 border border-gray-300 rounded nested-dropdown mt-2 bg-blue-50">
+                      <div class="nested-dropdown-header flex items-center justify-between font-bold text-lg text-gray-800">
+                        {{ round.header }}
+                        <span class="dropdown-icon"><i class="fa fa-chevron-down"></i></span>
+                      </div>
+                      <div class="nested-dropdown-content mt-2">
+                        {% for line in round.lines %}
+                          <pre class="text-base text-gray-800 whitespace-pre-wrap break-words">{{ line }}</pre>
+                        {% endfor %}
+                      </div>
+                    </div>
+                  {% endfor %}
+                </div>
+              </div>
+            {% else %}
+              <p class="text-blue-500">Results will appear here</p>
+            {% endif %}
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <!-- External JS files for loader, clear form and dropdown functionality -->
+  <script src="/static/loader.js"></script>
+  <script src="/static/clear.js"></script>
+  <script src="/static/dropdown.js"></script>
+  <!-- Copy icon functionality -->
+  <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      var copyIcon = document.getElementById("copyIcon");
+      if(copyIcon) {
+        copyIcon.addEventListener("click", function() {
+          var cipherText = document.getElementById("cipherTextValue").innerText;
+          navigator.clipboard.writeText(cipherText).then(function() {
+            copyIcon.innerHTML = '<i class="fa fa-check"></i>';
+            setTimeout(function() {
+              copyIcon.innerHTML = '<i class="fa fa-copy"></i>';
+            }, 2000);
+          }, function(err) {
+            console.error("Error copying text: ", err);
+          });
+        });
+      }
+    });
+  </script>
+</body>
+</html>
