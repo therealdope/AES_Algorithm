@@ -5,7 +5,6 @@ from aes import pad_to_128_bit, aes_encrypt_message, aes_decrypt_message
 app = Flask(__name__)
 
 @app.route('/', methods=['GET', 'POST'])
-
 def index():
     word_info = []
     round_info = []
@@ -14,7 +13,6 @@ def index():
     result = None
     
     if request.method == 'POST':
-        
         operation = request.form.get('operation', 'encrypt')
         # Process key input
         key_mode = request.form.get('key_mode', 'text')
@@ -43,6 +41,7 @@ def index():
                 except ValueError:
                     error = "Invalid hex input for plaintext."
                     return render_template('index.html', error=error)
+                # Ensure block length is a multiple of 16 bytes
                 while len(plaintext_bytes) % 16 != 0:
                     plaintext_bytes += b' '
             else:
@@ -71,7 +70,20 @@ def index():
             else:
                 error = "For decryption, ciphertext must be provided in hex format."
                 return render_template('index.html', error=error)
+            
             decrypted = aes_decrypt_message(ciphertext_bytes, key_bytes, word_info, round_info)
+            decrypted_mode = request.form.get('decrypted_mode', 'text')
+            if decrypted_mode == 'text':
+                try:
+                    decrypted_output = decrypted.decode('utf-8').rstrip()
+                except UnicodeDecodeError:
+                    # If decoding fails, use error replacement so that invalid bytes are replaced.
+                    decrypted_output = decrypted.decode('utf-8', errors='replace').rstrip()
+            elif decrypted_mode == 'hex':
+                decrypted_output = binascii.hexlify(decrypted).decode()
+            else:
+                decrypted_output = decrypted.decode('utf-8', errors='replace').rstrip()
+
             structured_round_info = []
             for block in round_info:
                 lines = block.split("\n")
@@ -79,7 +91,7 @@ def index():
                 lines = lines[1:]
                 structured_round_info.append({"header": header, "lines": lines})
             result = {
-                "decrypted_text": decrypted.decode().rstrip(),
+                "decrypted_text": decrypted_output,
                 "word_info": word_info,
                 "round_info": structured_round_info
             }

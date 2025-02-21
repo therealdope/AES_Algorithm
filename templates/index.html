@@ -70,8 +70,8 @@
     window.onload = function() {
       if (performance.navigation.type === 1) {
         document.getElementById("aesForm").reset();
-        // document.getElementById("resultDiv").innerHTML = "<p class='text-blue-500'>Results will appear here</p>";
-        // document.getElementById("cipherText").value = "";
+        document.getElementById("resultDiv").innerHTML = "<p class='text-blue-500'>Results will appear here</p>";
+        document.getElementById("cipherText").value = "";
       }
     };
   </script>
@@ -105,11 +105,11 @@
             <span class="block text-gray-800 text-sm font-bold mb-2">Operation:</span>
             <div class="flex gap-4">
               <label class="inline-flex items-center cursor-pointer">
-                <input type="radio" name="operation" value="encrypt" checked>
+                <input type="radio" name="operation" value="encrypt" checked onchange="toggleOperation()">
                 <span class="ml-2">Encrypt</span>
               </label>
               <label class="inline-flex items-center cursor-pointer">
-                <input type="radio" name="operation" value="decrypt">
+                <input type="radio" name="operation" value="decrypt" onchange="toggleOperation()">
                 <span class="ml-2">Decrypt</span>
               </label>
             </div>
@@ -159,13 +159,15 @@
           <div class="mb-6">
             <label for="key_mode" class="block text-gray-800 text-sm font-bold mb-2">Key Mode:</label>
             <select name="key_mode" id="key_mode" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500">
-              <option value="text">Plain Text</option>
+              <option value="text" selected>Plain Text</option>
               <option value="hex">Hex</option>
             </select>
           </div>
           <div class="mb-6">
-            <label for="key" class="block text-gray-800 text-sm font-bold mb-2">Key (16 characters):</label>
-            <input id="key" name="key" type="text" maxlength="32" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter key">
+            <label for="key" class="block text-gray-800 text-sm font-bold mb-2">
+              Key (<span id="keyLengthLabel">16 characters</span>):
+            </label>
+            <input id="key" name="key" type="text" maxlength="16" class="shadow border rounded w-full py-2 px-3 focus:outline-none focus:ring-2 focus:ring-blue-500" placeholder="Enter key">
           </div>
 
           <!-- Form Buttons -->
@@ -243,8 +245,11 @@
                 </div>
               {% elif operation == 'decrypt' %}
                 <div class="mb-4 p-4 border border-gray-300 rounded bg-blue-50">
-                  <p class="text-xl font-bold text-gray-800">Decrypted Text:</p>
-                  <p class="text-lg text-gray-800 break-words">{{ result.decrypted_text }}</p>
+                  <div class="flex items-center justify-between">
+                    <p id="decryptedTextLabel" class="text-xl font-bold text-gray-800">Decrypted Text:</p>
+                    <span class="copy-icon text-2xl mt-2 mr-1" id="copyDecryptedIcon"><i class="fa fa-copy"></i></span>
+                  </div>
+                  <p id="decryptedTextValue" class="text-lg text-gray-800 break-words">{{ result.decrypted_text }}</p>
                 </div>
               {% endif %}
 
@@ -296,8 +301,31 @@
   <script src="/static/loader.js"></script>
   <script src="/static/clear.js"></script>
   <script src="/static/dropdown.js"></script>
-  <!-- Copy icon functionality -->
+  <!-- Copy icon and dynamic input functionality -->
   <script>
+    // Toggle between encryption and decryption sections
+    function toggleOperation() {
+      const operation = document.querySelector('input[name="operation"]:checked').value;
+      document.getElementById("encryptSection").style.display = (operation === 'encrypt') ? 'block' : 'none';
+      document.getElementById("decryptSection").style.display = (operation === 'decrypt') ? 'block' : 'none';
+    }
+    
+    // Adjust key input based on key mode selection
+    document.getElementById('key_mode').addEventListener('change', function() {
+      var keyInput = document.getElementById('key');
+      var keyLengthLabel = document.getElementById('keyLengthLabel');
+      if (this.value === 'hex') {
+          keyInput.maxLength = 32;
+          keyInput.placeholder = "Enter 32 hex digits (16 bytes)";
+          keyLengthLabel.innerText = "32 hex digits";
+      } else {
+          keyInput.maxLength = 16;
+          keyInput.placeholder = "Enter 16-character key";
+          keyLengthLabel.innerText = "16 characters";
+      }
+    });
+    
+    // Copy functionality for encryption output
     document.addEventListener("DOMContentLoaded", function() {
       var copyIcon = document.getElementById("copyIcon");
       if(copyIcon) {
@@ -307,6 +335,22 @@
             copyIcon.innerHTML = '<i class="fa fa-check"></i>';
             setTimeout(function() {
               copyIcon.innerHTML = '<i class="fa fa-copy"></i>';
+            }, 2000);
+          }, function(err) {
+            console.error("Error copying text: ", err);
+          });
+        });
+      }
+      
+      // Copy functionality for decryption output
+      var copyDecryptedIcon = document.getElementById("copyDecryptedIcon");
+      if(copyDecryptedIcon) {
+        copyDecryptedIcon.addEventListener("click", function() {
+          var decryptedText = document.getElementById("decryptedTextValue").innerText;
+          navigator.clipboard.writeText(decryptedText).then(function() {
+            copyDecryptedIcon.innerHTML = '<i class="fa fa-check"></i>';
+            setTimeout(function() {
+              copyDecryptedIcon.innerHTML = '<i class="fa fa-copy"></i>';
             }, 2000);
           }, function(err) {
             console.error("Error copying text: ", err);
